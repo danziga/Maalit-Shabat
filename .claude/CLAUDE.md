@@ -1,4 +1,4 @@
-# מעלית שבת – נתניה
+# מעלית שבת ברוש 5 – נתניה
 
 A single self-contained `index.html` (no server, no build, no external libraries)
 that computes, on-demand for **any** Hebrew year, the Shabbat/Yom-Tov elevator
