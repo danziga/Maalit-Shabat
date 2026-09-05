@@ -395,7 +395,12 @@ function gISO(g){ return `${g.year}-${pad2(g.month)}-${pad2(g.day)}`; }
 function buildYearColumns(hebrewYear){
   const cols = [];
   const anchors = [
-    {label:'ראש השנה', m:7, d:2, before:2, type:'RH'},
+    // Rosh Hashana is a two-day yom tov; split into א׳/ב׳ so the second day
+    // (which may fall on a weekday, e.g. Sunday in תשפ״ז) is shown too. The
+    // chag runs continuously, so day א׳ carries only the entrance and day ב׳
+    // only the exit (havdala).
+    {label:'ראש השנה א׳', m:7, d:1, before:1, type:'RH', parts:'entrance'},
+    {label:'ראש השנה ב׳', m:7, d:2, before:1, type:'RH', parts:'exit'},
     {label:'יום כיפור', m:7, d:10, before:1, type:'YK'},
     {label:'סוכות', m:7, d:15, before:1, type:'Sukkot1'},
     {label:'שמחת תורה', m:7, d:22, before:1, type:'SimchatTorah'},
@@ -406,7 +411,7 @@ function buildYearColumns(hebrewYear){
   for(const a of anchors){
     const endJD = hebToJD(hebrewYear, a.m, a.d);
     cols.push({
-      parasha: a.label, dayType: a.type,
+      parasha: a.label, dayType: a.type, parts: a.parts || 'both',
       week_start: gISO(jdToGreg(endJD - a.before)),
       week_end: gISO(jdToGreg(endJD)),
       sortJD: endJD,
@@ -464,8 +469,11 @@ function computeTimes(weekStartISO, weekEndISO){
 function computeFullYear(hebrewYear){
   return buildYearColumns(hebrewYear).map(col => {
     const times = computeTimes(col.week_start, col.week_end);
+    const parts = col.parts || 'both';
+    if(parts === 'entrance'){ times.shabbat_end = null; }
+    if(parts === 'exit'){ times.candle_lighting = times.mincha1 = times.mincha2 = times.arvit = null; }
     return {
-      parasha: col.parasha, week_start: col.week_start, week_end: col.week_end,
+      parasha: col.parasha, week_start: col.week_start, week_end: col.week_end, parts,
       ...times, blocks: pickBlocks(times.candle_min, col.dayType),
     };
   });
@@ -553,11 +561,14 @@ function render(idx, status){
   html += `<div class="card">`;
   html += badge;
   html += `<div class="parasha-title">${e.parasha.trim()}</div>`;
-  html += `<div class="date-range">${fmtHeDate(ws)} &nbsp;–&nbsp; ${fmtHeDate(we)}</div>`;
+  const dateLine = e.parts === 'exit'
+    ? fmtHeDate(we)
+    : `${fmtHeDate(ws)} &nbsp;–&nbsp; ${fmtHeDate(we)}`;
+  html += `<div class="date-range">${dateLine}</div>`;
   html += `<div class="kv-grid">`;
-  html += kv('כניסת שבת', e.candle_lighting, true);
-  html += kv('יציאת שבת', e.shabbat_end, true);
-  html += kv('ערבית', e.arvit);
+  if(e.candle_lighting) html += kv('כניסת שבת', e.candle_lighting, true);
+  if(e.shabbat_end) html += kv('יציאת שבת', e.shabbat_end, true);
+  if(e.arvit) html += kv('ערבית', e.arvit);
   html += `</div>`;
   html += `</div>`;
 
