@@ -472,8 +472,12 @@ function computeFullYear(hebrewYear){
     const parts = col.parts || 'both';
     if(parts === 'entrance'){ times.shabbat_end = null; }
     if(parts === 'exit'){ times.candle_lighting = times.mincha1 = times.mincha2 = times.arvit = null; }
+    // A chag that ends on Friday runs straight into Shabbat with no havdala in
+    // between; the real motzaei is carried by the following (Shabbat) entry.
+    if(parseISO(col.week_end).getDay() === 5){ times.shabbat_end = null; }
     return {
       parasha: col.parasha, week_start: col.week_start, week_end: col.week_end, parts,
+      dayType: col.dayType,
       ...times, blocks: pickBlocks(times.candle_min, col.dayType),
     };
   });
@@ -547,9 +551,20 @@ function populateSelect(selectedIdx){
   }).join('');
 }
 
+/* True yom-tov day types (chol-hamoed Shabbatot are plain Shabbatot, not chag). */
+const YOMTOV_TYPES = new Set(['RH','YK','Sukkot1','SimchatTorah','Pesach1','Pesach7','Shavuot']);
+function edgeNoun(entry, weDate){
+  const onShabbat = weDate.getDay() === 6;
+  const onChag = YOMTOV_TYPES.has(entry.dayType);
+  if(onShabbat && onChag) return 'שבת וחג';
+  if(onChag) return 'חג';
+  return 'שבת';
+}
+
 function render(idx, status){
   const e = state.data[idx];
   const ws = parseISO(e.week_start), we = parseISO(e.week_end);
+  const edge = edgeNoun(e, we);
   const { evening, day } = splitBlocks(e.blocks);
   const prevEntry = idx>0 ? state.data[idx-1] : null;
   const bd = diffBlocks(e.blocks, prevEntry ? prevEntry.blocks : null);
@@ -565,11 +580,15 @@ function render(idx, status){
     ? fmtHeDate(we)
     : `${fmtHeDate(ws)} &nbsp;–&nbsp; ${fmtHeDate(we)}`;
   html += `<div class="date-range">${dateLine}</div>`;
-  html += `<div class="kv-grid">`;
-  if(e.candle_lighting) html += kv('כניסת שבת', e.candle_lighting, true);
-  if(e.shabbat_end) html += kv('יציאת שבת', e.shabbat_end, true);
-  if(e.arvit) html += kv('ערבית', e.arvit);
-  html += `</div>`;
+  if(e.candle_lighting || e.shabbat_end){
+    html += `<div class="kv-grid">`;
+    if(e.candle_lighting) html += kv('כניסת ' + edge, e.candle_lighting, true);
+    if(e.shabbat_end) html += kv('יציאת ' + edge, e.shabbat_end, true);
+    if(e.arvit) html += kv('ערבית', e.arvit);
+    html += `</div>`;
+  } else {
+    html += `<div class="note" style="margin-top:10px;">החג נמשך ברצף אל השבת – זמן היציאה מופיע בשבת שאחריו.</div>`;
+  }
   html += `</div>`;
 
   html += `<div class="card">`;
