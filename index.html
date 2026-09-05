@@ -506,7 +506,7 @@ function kv(label, value, hl){
   return `<div class="kv${hl?' highlight':''}"><div class="k">${label}</div><div class="v">${value||'&ndash;'}</div></div>`;
 }
 
-const state = { baseYear: null, data: [], selected: 0, autoIdx: null, autoStatus: null };
+const state = { baseYear: null, data: [], selected: 0, autoIdx: null, autoStatus: null, autoYear: null };
 
 function todayHebrewYear(){
   const t = new Date();
@@ -591,9 +591,20 @@ function selectIndex(idx, status){
 }
 
 function goToToday(){
-  const y = todayHebrewYear();
+  let y = todayHebrewYear();
   rebuildYear(y);
-  const auto = findAutoIndex();
+  let auto = findAutoIndex();
+  // Between the last Shabbat of a Hebrew year and Rosh Hashana of the next one
+  // (a gap of a few days, e.g. early Tishrei-eve) today's Hebrew year still
+  // resolves to the *outgoing* year, whose weeks are all in the past. Roll
+  // forward so the upcoming chag (Rosh Hashana) is shown instead of a stale week.
+  if(auto.status === null && state.data.length
+     && todayDateOnly() > parseISO(state.data[state.data.length-1].week_end)){
+    y += 1;
+    rebuildYear(y);
+    auto = findAutoIndex();
+  }
+  state.autoYear = y;
   state.autoIdx = auto.idx; state.autoStatus = auto.status;
   populateSelect(auto.idx);
   selectIndex(auto.idx, auto.status);
@@ -601,20 +612,20 @@ function goToToday(){
 
 document.getElementById('parashaSelect').addEventListener('change', function(){
   const i = parseInt(this.value,10);
-  const status = (state.baseYear===todayHebrewYear() && i===state.autoIdx) ? state.autoStatus : null;
+  const status = (state.baseYear===state.autoYear && i===state.autoIdx) ? state.autoStatus : null;
   selectIndex(i, status);
 });
 document.getElementById('todayBtn').addEventListener('click', goToToday);
 document.getElementById('yearPrevBtn').addEventListener('click', function(){
   rebuildYear(state.baseYear - 1);
   populateSelect(state.data.length-1);
-  const status = state.baseYear===todayHebrewYear() ? findAutoIndex() : null;
+  const status = state.baseYear===state.autoYear ? findAutoIndex() : null;
   selectIndex(state.data.length-1, status && status.idx===state.data.length-1 ? status.status : null);
 });
 document.getElementById('yearNextBtn').addEventListener('click', function(){
   rebuildYear(state.baseYear + 1);
   populateSelect(0);
-  const status = state.baseYear===todayHebrewYear() ? findAutoIndex() : null;
+  const status = state.baseYear===state.autoYear ? findAutoIndex() : null;
   selectIndex(0, status && status.idx===0 ? status.status : null);
 });
 
