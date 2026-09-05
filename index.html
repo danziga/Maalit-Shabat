@@ -569,8 +569,11 @@ function render(idx, status){
   const prevEntry = idx>0 ? state.data[idx-1] : null;
   const bd = diffBlocks(e.blocks, prevEntry ? prevEntry.blocks : null);
 
-  const badge = status === 'current' ? '<span class="status-badge">השבת הנוכחית</span>'
-    : status === 'upcoming' ? '<span class="status-badge upcoming">השבת הקרובה</span>' : '';
+  const chagOnly = edge === 'חג';
+  const badge = status === 'current'
+      ? `<span class="status-badge">${chagOnly ? 'החג הנוכחי' : 'השבת הנוכחית'}</span>`
+    : status === 'upcoming'
+      ? `<span class="status-badge upcoming">${chagOnly ? 'החג הקרוב' : 'השבת הקרובה'}</span>` : '';
 
   let html = '';
   html += `<div class="card">`;
@@ -592,23 +595,25 @@ function render(idx, status){
   html += `</div>`;
 
   html += `<div class="card">`;
-  let sectionHeader = `<h2 class="section-title">פעילות המעלית – ליל שבת</h2>`;
+  const nightTitle = `פעילות המעלית – ליל ${edge}`;
+  const dayTitle = `פעילות המעלית – יום ${edge}`;
+  let sectionHeader = `<h2 class="section-title">${nightTitle}</h2>`;
   if(bd.changed){
     const detail = [];
     if(bd.added.size) detail.push(`${bd.added.size} חלונות חדשים`);
     if(bd.removedCount) detail.push(`${bd.removedCount} הוסרו`);
     sectionHeader = `<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:26px 0 10px;">`
-      + `<h2 class="section-title" style="margin:0;">פעילות המעלית – ליל שבת</h2>`
-      + `<span class="changed-badge">השתנה משבת קודמת${detail.length?' &middot; '+detail.join(', '):''}</span>`
+      + `<h2 class="section-title" style="margin:0;">${nightTitle}</h2>`
+      + `<span class="changed-badge">השתנה מהשבוע הקודם${detail.length?' &middot; '+detail.join(', '):''}</span>`
       + `</div>`;
   }
   html += sectionHeader;
   html += `<div class="timeline">` + evening.map(b=>pill(b, bd.added.has(b))).join('') + `</div>`;
   if(day.length){
-    html += `<h2 class="section-title">פעילות המעלית – יום שבת</h2>`;
+    html += `<h2 class="section-title">${dayTitle}</h2>`;
     html += `<div class="timeline">` + day.map(b=>pill(b, bd.added.has(b))).join('') + `</div>`;
   }
-  html += `<div class="note">הרשימה מציגה את חלונות הזמן שבהם המעלית פועלת אוטומטית (עוצרת בכל קומה), על פי לוח הזמנים המקורי או שבוע מקביל לו. שעות שאינן מופיעות ברשימה – המעלית אינה פועלת באופן אוטומטי.${bd.changed?' חלונות מסומנים בכתום הם חדשים לעומת השבת הקודמת בלוח.':''}</div>`;
+  html += `<div class="note">הרשימה מציגה את חלונות הזמן שבהם המעלית פועלת אוטומטית (עוצרת בכל קומה), על פי לוח הזמנים המקורי או שבוע מקביל לו. שעות שאינן מופיעות ברשימה – המעלית אינה פועלת באופן אוטומטי.${bd.changed?' חלונות מסומנים בכתום הם חדשים לעומת השבוע הקודם בלוח.':''}</div>`;
   html += `</div>`;
 
   document.getElementById('content').innerHTML = html;
